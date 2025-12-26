@@ -1,0 +1,21 @@
+name: Purge Gists
+on:
+  workflow_dispatch:
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete payload gist
+        run: |
+          curl -X DELETE \
+            -H "Authorization: token ${{ secrets.GIST_WIPER_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/gists/${{ vars.PAYLOAD_GIST_ID }}" || true
+      
+      - name: Delete middleman gist
+        run: |
+          curl -X DELETE \
+            -H "Authorization: token ${{ secrets.GIST_WIPER_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/gists/${{ vars.MIDDLEMAN_GIST_ID }}" || true
