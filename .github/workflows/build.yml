@@ -1,0 +1,80 @@
+name: Build Cython Binary
+on:
+  workflow_dispatch:
+    inputs:
+      payload_url:
+        required: true
+      is_encrypted:
+        required: true
+        default: false
+      base_image:
+        type: choice
+        description: 'Build Container'
+        options: 
+          - rockylinux/rockylinux:8
+          - ubuntu:24.04
+        default: rockylinux/rockylinux:8
+      cpu_arch:
+        required: false
+        description: 'Target architecture'
+        default: skylake-avx512
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.base_image }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Base Deps
+        run: |
+          if command -v dnf > /dev/null 2>&1; then
+            dnf install -y curl openssl
+          else
+            apt-get update && apt-get install -y curl openssl
+          fi
+
+      - name: Download payload
+        run: curl -s "${{ inputs.payload_url }}" -o dump.txt
+      
+      - name: Process payload
+        env:
+          KEY: ${{ secrets.EPHEMERAL_KEY }}
+        run: |
+          if [ "${{ inputs.is_encrypted }}" = "true" ]; then
+            cat dump.txt | base64 -d | openssl enc -d -aes-256-cbc -pbkdf2 -pass pass:$KEY > myScript.py
+          else
+            mv dump.txt myScript.py
+          fi
+      
+      - name: Install Build Tools
+        run: |
+          if command -v dnf > /dev/null 2>&1; then
+            dnf install -y gcc python3.12 python3.12-devel
+            python3.12 -m ensurepip
+            echo "PYTHON_BIN=python3.12" >> $GITHUB_ENV
+            echo "PIP_ARGS=" >> $GITHUB_ENV
+          else
+            apt-get install -y gcc binutils python3-dev python3-pip
+            echo "PYTHON_BIN=python3" >> $GITHUB_ENV
+            echo "PIP_ARGS=--break-system-packages" >> $GITHUB_ENV
+          fi
+      
+      - name: Install Dependencies
+        run: $PYTHON_BIN -m pip install cython setuptools $PIP_ARGS
+      
+      - name: Build binary
+        env:
+          CPU_ARCH: ${{ inputs.cpu_arch }}
+        run: $PYTHON_BIN setup.py build_ext --inplace
+      
+      - name: Strip symbols
+        run: strip --strip-all *.so
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: myScript-binary
+          path: "*.so"
+          retention-days: 1
