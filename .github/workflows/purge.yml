@@ -1,21 +1,17 @@
-name: Purge Gists
+name: Purge
 on:
   workflow_dispatch:
 
 jobs:
   purge:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - name: Delete payload gist
+      - name: Delete
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_WIPER_TOKEN }}
         run: |
-          curl -X DELETE \
-            -H "Authorization: token ${{ secrets.GIST_WIPER_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/gists/${{ vars.PAYLOAD_GIST_ID }}" || true
-      
-      - name: Delete middleman gist
-        run: |
-          curl -X DELETE \
-            -H "Authorization: token ${{ secrets.GIST_WIPER_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/gists/${{ vars.MIDDLEMAN_GIST_ID }}" || true
+          TAG="${{ vars.TARGET_RELEASE_TAG }}"
+          [ -z "$TAG" ] && exit 0
+          gh release delete "$TAG" --yes --cleanup-tag --repo ${{ github.repository }} || true
