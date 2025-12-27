@@ -37,7 +37,7 @@ jobs:
           fi
 
       - name: Download payload
-        run: curl -s "${{ inputs.payload_url }}" -o dump.txt
+        run: curl -sL "${{ inputs.payload_url }}" -o dump.txt
       
       - name: Process payload
         env:
