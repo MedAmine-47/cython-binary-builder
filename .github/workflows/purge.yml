@@ -1,0 +1,17 @@
+name: Purge
+on:
+  workflow_dispatch:
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Delete Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ vars.TARGET_RELEASE_TAG }}"
+          [ -z "$TAG" ] && exit 0
+          gh release delete "$TAG" --yes --cleanup-tag --repo ${{ github.repository }} || true
