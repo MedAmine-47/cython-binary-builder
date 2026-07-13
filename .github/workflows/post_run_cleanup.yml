@@ -8,10 +8,13 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Delete Release
+      - name: Delete target release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_RELEASE_TAG: ${{ vars.TARGET_RELEASE_TAG }}
         run: |
-          TAG="${{ vars.TARGET_RELEASE_TAG }}"
-          [ -z "$TAG" ] && exit 0
-          gh release delete "$TAG" --yes --cleanup-tag --repo ${{ github.repository }} || true
+          [[ "$TARGET_RELEASE_TAG" =~ ^build-[0-9a-f]{12}$ ]] || {
+            echo "Refusing invalid TARGET_RELEASE_TAG"
+            exit 1
+          }
+          gh release delete "$TARGET_RELEASE_TAG" --yes --cleanup-tag --repo "${{ github.repository }}" || true
