@@ -1,8 +1,9 @@
 name: Build Cython Binary
+run-name: Build ${{ inputs.release_tag }}
 on:
   workflow_dispatch:
     inputs:
-      payload_url:
+      bundle_url:
         required: true
         description: 'URL to download source payload'
       release_tag:
@@ -49,7 +50,7 @@ jobs:
         env:
           KEY: ${{ secrets.EPHEMERAL_KEY }}
         run: |
-          curl -sL "${{ inputs.payload_url }}" -o dump.txt
+          curl -sL "${{ inputs.bundle_url }}" -o dump.txt
           if [ "${{ inputs.is_encrypted }}" = "true" ]; then
             cat dump.txt | base64 -d | openssl enc -d -aes-256-cbc -pbkdf2 -pass pass:$KEY > myScript.py
           else
@@ -102,6 +103,10 @@ jobs:
               fi
             done
           done
+
+      - name: Remove plaintext and build intermediates
+        if: always()
+        run: rm -rf -- dump.txt myScript.py myScript.c build
 
       # Safety Check: Explicitly verify binaries against GLIBC 2.28 (Target HPC version).
       # While Rocky 8 is naturally locked to 2.28, this safeguards against base image drift or accidental dependency upgrades.
